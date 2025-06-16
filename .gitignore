@@ -1,0 +1,34 @@
+# Ignore all
+*
+
+# Keep project-related files
+!src/
+!src/**
+!README.md
+!pyproject.toml
+
+# Ignore old files
+src/cr_smps/code_steven.py
+src/cr_smps/cr-smps.py
+
+# Ignore Python cache and build artifacts
+*.egg-info/
+build/
+dist/
+__pycache__/
+*.py[cod]
+
+# Ignore data files
+*.csv
+*.xlsx
+*.xls
+*.txt
+*.png
+*.jpg
+*.jpeg
+*.joblib
+
+# Ignore hidden files and directories
+.*
+# But keep the .gitignore file itself
+!.gitignore

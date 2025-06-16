@@ -1,0 +1,10 @@
+[project]
+name = "cr-smps"
+version = "0.0.1"
+description = "Utilities for reading, analyzing and plotting SMPS data"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Congrong Wang", email = "SMPS@congrong.wang" }]
+
+dependencies = ["numpy", "pandas", "matplotlib", "scipy", "joblib"]
