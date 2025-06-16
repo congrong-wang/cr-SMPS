@@ -183,7 +183,7 @@ def _SMPSDataset_from_SMPSData_list(SMPSData_list: list[SMPSData]) -> SMPSDatase
     return inst
 
 
-def SMPSDataset_from_dir(
+def _SMPSDataset_from_dir(
     dir_path: str, read_metadata: bool = True, read_rawdata: bool = False
 ) -> SMPSDataset:
     """

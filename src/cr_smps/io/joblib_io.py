@@ -2,7 +2,7 @@ import joblib
 from ..core.smps_dataset import SMPSDataset
 
 
-def save_SMPSDataset_to_file(data: SMPSDataset, filename: str, compress: int = 0):
+def _save_SMPSDataset_to_file(data: SMPSDataset, filename: str, compress: int = 0):
     # use joblib to save the dataset to a file
     """
     Save the SMPSDataset instance to a file using joblib.
@@ -17,7 +17,7 @@ def save_SMPSDataset_to_file(data: SMPSDataset, filename: str, compress: int = 0
     joblib.dump(data, filename, compress=compress)
 
 
-def load_SMPSDataset_from_file(filename: str) -> SMPSDataset:
+def _load_SMPSDataset_from_file(filename: str) -> SMPSDataset:
     """
     Load a SMPSDataset instance from a file using joblib.
     Parameters

@@ -1,8 +1,8 @@
-from .reader import SMPSDataset_from_dir
-from .joblib_io import save_SMPSDataset_to_file, load_SMPSDataset_from_file
+from .reader import _SMPSDataset_from_dir
+from .joblib_io import _save_SMPSDataset_to_file, _load_SMPSDataset_from_file
 
 __all__ = [
-    "SMPSDataset_from_dir",
-    "save_SMPSDataset_to_file",
-    "load_SMPSDataset_from_file",
+    "_SMPSDataset_from_dir",
+    "_save_SMPSDataset_to_file",
+    "_load_SMPSDataset_from_file",
 ]

@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 from .smps_data import SMPSData
 import pandas as pd
 
+from typing import Optional, Union, Tuple, List
+import datetime
+
 
 @dataclass
 class SMPSDataset:
@@ -167,8 +170,29 @@ class SMPSDataset:
         self.smpsdata_list.append(smps_data)
         # self.integrate_data()  # Uncomment this if you want to integrate data after adding a new instance
 
-    from typing import Optional, Union, Tuple, List
-    import datetime
+    @classmethod
+    def read_from_dir(
+        cls, dir_path: str, read_metadata: bool = True, read_rawdata: bool = False
+    ):
+        from ..io.reader import _SMPSDataset_from_dir
+
+        """
+        Create an instance of SMPSDataset by reading multiple SMPS CSV files from a directory.
+        Parameters
+        ----------
+        dir_path : str
+            The path to the directory containing the SMPS CSV files.
+        read_metadata : bool, optional
+            Whether to read metadata from the files. Default is True.
+        read_rawdata : bool, optional
+            Whether to read raw data from the files. Default is False.
+        Returns
+        -------
+        SMPSDataset: An instance of SMPSDataset containing the data and metadata from the files.
+        """
+        return _SMPSDataset_from_dir(
+            dir_path, read_metadata=read_metadata, read_rawdata=read_rawdata
+        )
 
     def plot_heatmap(
         self,
@@ -215,3 +239,33 @@ class SMPSDataset:
 
         for smps_data in self.smpsdata_list:
             plot_pnsd(smps_data)
+
+    def save_to_file(self, filename):
+        from ..io.joblib_io import _save_SMPSDataset_to_file
+
+        """
+        Save the SMPSDataset instance to a file using joblib.
+        Parameters
+        ----------
+        filename : str
+            The name of the file to save the dataset to.
+        Returns
+        -------
+        None: The method saves the dataset to a file and does not return anything.
+        """
+        _save_SMPSDataset_to_file(self, filename)
+
+    def load_from_file(self, filename):
+        from ..io.joblib_io import _load_SMPSDataset_from_file
+
+        """
+        Load a SMPSDataset instance from a file using joblib.
+        Parameters
+        ----------
+        filename : str
+            The name of the file to load the dataset from.
+        Returns
+        -------
+        SMPSDataset: An instance of SMPSDataset loaded from the file.
+        """
+        return _load_SMPSDataset_from_file(filename)
