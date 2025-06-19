@@ -6,10 +6,14 @@ import glob
 import numpy as np
 import os
 import pandas as pd
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 def _SMPSData_from_csv(
-    file_path: str, read_metadata: bool = True, read_rawdata: bool = False
+    file_path: str,
+    read_metadata: bool = True,
+    read_rawdata: bool = False,
+    time_zone: str | None = None,
 ) -> SMPSData:
     """
     Create an instance of SMPSData from a output CSV file.
@@ -37,9 +41,7 @@ def _SMPSData_from_csv(
     """ Read sample data. """
     inst = SMPSData()
     # Save filename to SMPSData info
-    inst.filename = os.path.basename(
-        file_path
-    )  # Remove the path, keep only the filename
+    inst.filename = os.path.basename(file_path)  # Keep only the filename, not full path
 
     # Read data
     df = pd.read_csv(file_path, skiprows=52, low_memory=False)
@@ -48,6 +50,7 @@ def _SMPSData_from_csv(
         (df["Detector Status"] == "Normal Scan")
         & (df["Classifier Errors"] == "Normal Scan")
     ].copy()
+
     # Set the "DateTime Sample Start" column as the index
     # Always parse with dayfirst=True to handle dd-mm-yy and dd-mm-yyyy
     """
@@ -55,9 +58,44 @@ def _SMPSData_from_csv(
     in the current function this case is not handled.
     """
 
+    # Convert "DateTime Sample Start" to pd.datetime64[ns], coercing errors to NaT
     df["DateTime Sample Start"] = pd.to_datetime(
         df["DateTime Sample Start"], errors="coerce", dayfirst=True
     )
+    # Check if the parsing was successful
+    if df["DateTime Sample Start"].isna().any():
+        # If there are any NaN values, print a warning
+        print(
+            "Warning: Some DateTime Sample Start entries failed to parse. "
+            "Check the date format in the CSV file."
+        )
+        # print the problematic rows
+        bad_rows = df[df["DateTime Sample Start"].isna()]
+        print(
+            f'Warning: {len(bad_rows)} entries failed to parse "DateTime Sample Start".'
+        )
+        print("Problematic rows:")
+        print(bad_rows)
+
+    # If time_zone is provided, label time zone information to the index.
+    # If time_zone is None, the index will remain unknown.
+    if time_zone is not None:
+        try:
+            tz = ZoneInfo(time_zone)
+            # Convert pd.datetime64[ns] to timezone-aware datetime64[ns, tz]
+            df["DateTime Sample Start"] = df["DateTime Sample Start"].dt.tz_localize(tz)
+            inst.time_zone = tz  # add to SMPSData's time_zone attribute
+        except ZoneInfoNotFoundError:
+            print(f"Time zone '{time_zone}' not found. No time zone will be assigned.")
+            print(
+                "Find correct time zone names at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
+            )
+            inst.time_zone = None
+    else:
+        inst.time_zone = None
+    # Set the index to "DateTime Sample Start" (type: pd.DatetimeIndex)
+    # without time zone: pd.datetime64[ns]
+    # with time zone: pd.datetime64[ns, tz]
     df.set_index("DateTime Sample Start", inplace=True)
 
     # Add start and end time to metadata
@@ -126,7 +164,10 @@ def _SMPSData_from_csv(
 
 
 def _SMPSData_list_from_dir(
-    dir_path: str, read_metadata: bool = True, read_rawdata: bool = False
+    dir_path: str,
+    read_metadata: bool = True,
+    read_rawdata: bool = False,
+    time_zone: str | None = None,
 ) -> list[SMPSData]:
     """
     Read multiple SMPS CSV files from a folder and return a list of SMPSData instances.
@@ -158,7 +199,12 @@ def _SMPSData_list_from_dir(
     # Iterate over each CSV file and read it into an SMPSData instance
     print("Reading...")
     for file_path in csv_filenames:
-        smps_file = _SMPSData_from_csv(file_path, read_metadata, read_rawdata)
+        smps_file = _SMPSData_from_csv(
+            file_path,
+            read_metadata=read_metadata,
+            read_rawdata=read_rawdata,
+            time_zone=time_zone,
+        )
         SMPSData_list.append(smps_file)
     print("Done reading.")
 
@@ -184,7 +230,10 @@ def _SMPSDataset_from_SMPSData_list(SMPSData_list: list[SMPSData]) -> SMPSDatase
 
 
 def _SMPSDataset_from_dir(
-    dir_path: str, read_metadata: bool = True, read_rawdata: bool = False
+    dir_path: str,
+    read_metadata: bool = True,
+    read_rawdata: bool = False,
+    time_zone: str | None = None,
 ) -> SMPSDataset:
     """
     Create an instance of SMPSDataset by reading multiple SMPS CSV files from a directory.
@@ -201,7 +250,10 @@ def _SMPSDataset_from_dir(
     SMPSDataset: An instance of SMPSDataset containing the data and metadata from the files.
     """
     SMPSData_list = _SMPSData_list_from_dir(
-        dir_path, read_metadata=read_metadata, read_rawdata=read_rawdata
+        dir_path,
+        read_metadata=read_metadata,
+        read_rawdata=read_rawdata,
+        time_zone=time_zone,
     )
     inst = SMPSDataset()
     inst.smpsdata_list = _SMPSDataset_from_SMPSData_list(SMPSData_list)

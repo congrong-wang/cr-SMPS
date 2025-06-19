@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import pandas as pd
 from typing import Optional, Union, List, Tuple
+from zoneinfo import ZoneInfo
 
 
 @dataclass
@@ -29,6 +30,7 @@ class SMPSData:
         self.rawdata = None  # Method to read raw data has not been implemented yet
         self.filename = None  # Original file name
         self.dlogDp = None
+        self.time_zone: ZoneInfo | None = None
 
     # Return the length of the sample data
     def __len__(self):

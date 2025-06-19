@@ -9,6 +9,7 @@ import numpy as np
 import os
 import pandas as pd
 from typing import Optional, Union, Tuple, List
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # This function will be called by the SMPSDataset class as a method
 
@@ -29,6 +30,7 @@ def _plot_heatmap(
         ]
     ] = None,
     output_dir: Optional[str] = None,
+    output_time_zone: Optional[Union[str, datetime.tzinfo]] = None,
 ):
     # For now, the problem of this plotting function,
     # is that it does not do averaging for large datasets.
@@ -58,7 +60,71 @@ def _plot_heatmap(
     cbar_max = 1e4
     pcm = None  # pcm is the handle for the latest pcolormesh object
 
-    # Determine the time range for the heatmap
+    """ CHECK TIME ZONES """
+
+    def check_SMPSDataset_time_zone(dataset):
+        """Check the time zones of all SMPSData instances in the dataset.
+        Returns
+        -------
+        int: 2 if all SMPSData instances have the same time zone,
+             1 if they have different time zones,
+            -1 if all SMPSData instances do not have a time zone,
+             0 if some have a time zone and some do not.
+        """
+        # Gather all time_zone into a list. If time_zone exists, the value will be
+        # returned, otherwise None.
+        zones = [getattr(s, "time_zone", None) for s in dataset.smpsdata_list]
+        all_have_zone = all(z is not None for z in zones)
+        if all_have_zone:
+            # If all have time zone, check if they are the same
+            first_zone = zones[0]
+            if all(z == first_zone for z in zones):
+                return 2
+            else:
+                return 1
+        all_no_zone = all(z is None for z in zones)
+        if all_no_zone:
+            return -1
+        else:
+            return 0
+
+    time_zone_status = check_SMPSDataset_time_zone(dataset)
+
+    if time_zone_status == 0:
+        raise ValueError(
+            "Some SMPSData instances have a time zone, while others do not. "
+            "Please ensure all SMPSData instances have a time zone, or all do not have one."
+        )
+
+    # output_time_zone is set
+    if output_time_zone is not None:
+        if time_zone_status < 0:
+            raise ValueError(
+                "output_time_zone is set, but all SMPSData instances do not have a time zone. "
+                "Please ensure all SMPSData instances have a time zone, or do not set output_time_zone."
+            )
+    # output_time_zone is NOT set
+    else:
+        # All SMPSData instances have the same time zone
+        if time_zone_status == 2:
+            # use that time zone for plotting
+            output_time_zone = dataset.smpsdata_list[0].time_zone
+        # SMPSData instances have different time zones
+        elif time_zone_status == 1:
+            raise ValueError(
+                "output_time_zone is not set, and SMPSData instances have different time zones. "
+                "Could not determine a single time zone for plotting. "
+            )
+
+    """ DETERMINE TIME RANGE 
+    variables that will be used later:
+    xlim: x-axis range
+    time_str: the line blow the title, showing the time range
+    fname: the filename for saving the heatmap image
+    Function mask_func(idx): used to filter data for each SMPSData instance
+        idx: pd.DatetimeIndex of the sample data index
+    """
+
     # If time_range is None, use all data
     if time_range is None:
         xlim = None  # No xlim set, use all data
@@ -74,16 +140,37 @@ def _plot_heatmap(
     elif isinstance(
         time_range, (str, pd.Timestamp, datetime.datetime, pd.DateOffset)
     ) or hasattr(time_range, "date"):
-        date = pd.to_datetime(time_range).date()
+        dt = pd.to_datetime(time_range)  # convert date str to pd.Timestamp
+
+        if output_time_zone is not None:
+            # localize the date to the output time zone
+            dt = dt.tz_localize(output_time_zone)
+        date = dt.date()  # Get the date
         # Set xlim to the whole day
         start = pd.Timestamp.combine(date, pd.Timestamp.min.time())
         end = pd.Timestamp.combine(date, pd.Timestamp.max.time())
+        if output_time_zone is not None:
+            start = start.tz_localize(output_time_zone)
+            end = end.tz_localize(output_time_zone)
+
         xlim = (start, end)
         time_str = f"{date.strftime('%Y-%m-%d')}"
         fname = f"heatmap_{date}.png"
+        if output_time_zone is not None:
+            xlabel = "Time ({})".format(output_time_zone)
+        else:
+            xlabel = "Time (no time zone)"
 
         def mask_func(idx):
-            return pd.to_datetime(idx).date == date  # All data for that date
+            # must convert idx to output_time_zone, otherwise the comparison will fail
+            if output_time_zone is not None:
+                if idx.tz is None:
+                    idx = idx.tz_localize(output_time_zone)
+                else:
+                    idx = idx.tz_convert(output_time_zone)
+
+            # .normalize() is used to compare the date only, ignoring the time part
+            return idx.normalize() == dt.normalize()
 
     # If time_range is a tuple or list, use that range
     elif isinstance(time_range, (tuple, list)) and len(time_range) == 2:
@@ -110,9 +197,22 @@ def _plot_heatmap(
         else:
             time_str = f"{start.strftime('%Y-%m-%d %H:%M:%S')} ~ {end.strftime('%Y-%m-%d %H:%M:%S')}"
             fname = f"heatmap_{start.strftime('%Y%m%d_%H%M%S')}_{end.strftime('%Y%m%d_%H%M%S')}.png"
+
+        if output_time_zone is not None:
+            # localize the start and end to the output time zone
+            start = start.tz_localize(output_time_zone)
+            end = end.tz_localize(output_time_zone)
+            xlabel = "Time ({})".format(output_time_zone)
         xlim = (start, end)
 
         def mask_func(idx):
+            if output_time_zone is not None:
+                # If idx is timezone-naive, localize it to the output time zone
+                if idx.tz is None:
+                    idx = idx.tz_localize(output_time_zone)
+                else:
+                    # If idx is timezone-aware, convert it to the output time zone
+                    idx = idx.tz_convert(output_time_zone)
             idx_dt = pd.to_datetime(idx)
             return (idx_dt >= start) & (idx_dt <= end)
 
@@ -124,7 +224,13 @@ def _plot_heatmap(
     # Plotting the heatmap
     # Iterate over each SMPSData instance and plot the data
     for s in dataset.smpsdata_list:
-        idx = pd.to_datetime(s.sample_data.index)
+        idx = s.sample_data.index
+        # debug: to see if the index is timezone-aware
+        if idx.tz is not None:
+            print(f"SMPSData index is timezone-aware: {idx.tz}")
+        else:
+            print(f"SMPSData index is NOT timezone-aware.")
+
         mask = mask_func(idx)
         if not mask.any():
             continue  # Skip if no data for this time range
@@ -148,7 +254,9 @@ def _plot_heatmap(
     ax.set_ylim([1e1, 1e3])
 
     """ Set labels and title """
-    ax.set_xlabel("Time", fontsize=18)
+    if not xlabel:
+        xlabel = "time."
+    ax.set_xlabel(xlabel, fontsize=18)
     ax.set_ylabel("Particle Size (nm)", fontsize=18)
     ax.set_title("SMPS Particle Size Concentration Heatmap", fontsize=20, y=1.04)
     # Add the time string below the title
@@ -166,7 +274,12 @@ def _plot_heatmap(
     ax.semilogy()  # Set y-axis to logarithmic scale
     ax.xaxis_date()
     ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=10))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d\n%H:%M"))
+    ax.xaxis.set_major_formatter(
+        mdates.DateFormatter(
+            "%Y-%m-%d\n%H:%M",
+            tz=ZoneInfo(output_time_zone) if output_time_zone else None,
+        )
+    )
     ax.yaxis.set_major_formatter(mtick.ScalarFormatter())
 
     # Set x-axis tick & labels
@@ -177,12 +290,20 @@ def _plot_heatmap(
         # Within 1 day, use hourly ticks
         if total_days <= 1:
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H"))
+            ax.xaxis.set_major_formatter(
+                mdates.DateFormatter(
+                    "%H", tz=ZoneInfo(output_time_zone) if output_time_zone else None
+                )
+            )
             plt.setp(ax.get_xticklabels(), fontsize=16)
         # 1-10 days, use daily major ticks and 06/12/18 hour minor ticks
         elif 1 < total_days <= 12:
             ax.xaxis.set_major_locator(mdates.DayLocator())
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+            ax.xaxis.set_major_formatter(
+                mdates.DateFormatter(
+                    "%m-%d", tz=ZoneInfo(output_time_zone) if output_time_zone else None
+                )
+            )
             ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[6, 12, 18]))
             ax.xaxis.set_minor_formatter(mdates.DateFormatter("%H"))
             plt.setp(
@@ -203,12 +324,21 @@ def _plot_heatmap(
         else:
             # 超过10天，默认
             ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=10))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+            ax.xaxis.set_major_formatter(
+                mdates.DateFormatter(
+                    "%Y-%m-%d",
+                    tz=ZoneInfo(output_time_zone) if output_time_zone else None,
+                )
+            )
             plt.setp(ax.get_xticklabels(), rotation=30, ha="right", fontsize=14)
     # If no xlim is set, i.e. all data is used, use AutoDateLocator
     else:
         ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=10))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+        ax.xaxis.set_major_formatter(
+            mdates.DateFormatter(
+                "%Y-%m-%d", tz=ZoneInfo(output_time_zone) if output_time_zone else None
+            )
+        )
         plt.setp(ax.get_xticklabels(), rotation=30, ha="right", fontsize=14)
 
     # Set y-axis tick & labels

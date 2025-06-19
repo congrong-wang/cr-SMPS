@@ -172,7 +172,11 @@ class SMPSDataset:
 
     @classmethod
     def read_from_dir(
-        cls, dir_path: str, read_metadata: bool = True, read_rawdata: bool = False
+        cls,
+        dir_path: str,
+        read_metadata: bool = True,
+        read_rawdata: bool = False,
+        time_zone: str | None = None,
     ):
         from ..io.reader import _SMPSDataset_from_dir
 
@@ -191,7 +195,10 @@ class SMPSDataset:
         SMPSDataset: An instance of SMPSDataset containing the data and metadata from the files.
         """
         return _SMPSDataset_from_dir(
-            dir_path, read_metadata=read_metadata, read_rawdata=read_rawdata
+            dir_path,
+            read_metadata=read_metadata,
+            read_rawdata=read_rawdata,
+            time_zone=time_zone,
         )
 
     def plot_heatmap(
@@ -210,6 +217,7 @@ class SMPSDataset:
             ]
         ] = None,
         output_dir: Optional[str] = None,
+        output_time_zone: Optional[Union[str, datetime.tzinfo]] = None,
     ):
         """
         Plot a heatmap of the sample data in the dataset.
@@ -225,7 +233,12 @@ class SMPSDataset:
         """
         from ..analysis.plotting.plot_heatmap import _plot_heatmap
 
-        _plot_heatmap(self, time_range=time_range, output_dir=output_dir)
+        _plot_heatmap(
+            self,
+            time_range=time_range,
+            output_dir=output_dir,
+            output_time_zone=output_time_zone,
+        )
 
     def plot_pnsd(self):
         """
