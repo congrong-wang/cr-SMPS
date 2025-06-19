@@ -225,11 +225,11 @@ def _plot_heatmap(
     # Iterate over each SMPSData instance and plot the data
     for s in dataset.smpsdata_list:
         idx = s.sample_data.index
-        # debug: to see if the index is timezone-aware
-        if idx.tz is not None:
-            print(f"SMPSData index is timezone-aware: {idx.tz}")
-        else:
-            print(f"SMPSData index is NOT timezone-aware.")
+        # # debug: to see if the index is timezone-aware
+        # if idx.tz is not None:
+        #     print(f"SMPSData index is timezone-aware: {idx.tz}")
+        # else:
+        #     print(f"SMPSData index is NOT timezone-aware.")
 
         mask = mask_func(idx)
         if not mask.any():
