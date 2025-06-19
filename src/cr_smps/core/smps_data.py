@@ -84,8 +84,8 @@ class SMPSData:
                     else:
                         print(f"Metadata '{keys}' is not found.")
                 # If multiple keys are provided as a list or tuple of strings
-                elif isinstance(
-                    keys, (list, tuple) and all(isinstance(k, str) for k in keys)
+                elif isinstance(keys, (list, tuple)) and all(
+                    isinstance(k, str) for k in keys
                 ):
                     for k in keys:
                         if k in self.metadata:
