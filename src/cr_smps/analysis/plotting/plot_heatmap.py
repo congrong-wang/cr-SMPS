@@ -226,7 +226,6 @@ def _plot_heatmap(
         )  # Set colorbar label font size
 
     plt.tight_layout()  # `tight_layout` to avoid overlapping labels
-    plt.show()
 
     # Save the figure
     if output_dir:
@@ -234,7 +233,8 @@ def _plot_heatmap(
         save_path = os.path.join(output_dir, fname)
     else:
         save_path = fname
-
     plt.savefig(save_path, dpi=300, bbox_inches="tight")
-    # close the figure to free up memory
+
+    # Show and close
+    plt.show()
     plt.close(fig)
