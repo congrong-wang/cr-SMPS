@@ -236,5 +236,5 @@ def _plot_heatmap(
     plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
     # Show and close
-    plt.show()
+    # plt.show()
     plt.close(fig)
