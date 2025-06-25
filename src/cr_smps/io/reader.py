@@ -52,16 +52,43 @@ def _SMPSData_from_csv(
     ].copy()
 
     # Set the "DateTime Sample Start" column as the index
-    # Always parse with dayfirst=True to handle dd-mm-yy and dd-mm-yyyy
+    # Always parse with dayfirst=True to handle dd/mm/yy and dd/mm/yyyy
     """
-    Note in some cases, the format might be mm-dd-yy or mm-dd-yyyy, but 
-    in the current function this case is not handled.
+    Note in some cases, the format might be month-first, but the function is not yet 
+    able to handle this. Maybe in the future a parameter can be added to allow 
+    specifying month-first parsing.
     """
 
-    # Convert "DateTime Sample Start" to pd.datetime64[ns], coercing errors to NaT
-    df["DateTime Sample Start"] = pd.to_datetime(
-        df["DateTime Sample Start"], errors="coerce", dayfirst=True
-    )
+    def parse_mixed_date(s):
+        # Skip NaN values
+        if pd.isna(s):
+            return pd.NaT
+        # Try parsing with multiple formats
+        for fmt in (
+            "%d/%m/%Y %H:%M:%S",  # e.g., 31/12/2023 23:59:59
+            "%d/%m/%y %H:%M:%S",  # e.g., 31/12/23 23:59:59
+            "%d/%m/%Y %I:%M:%S %p",  # e.g., 31/12/2023 11:59:59 PM
+            "%d/%m/%y %I:%M:%S %p",  # e.g., 31/12/23 11:59:59 PM
+        ):
+            try:
+                return pd.to_datetime(s, format=fmt, dayfirst=True)
+            except Exception:
+                continue
+        # If all formats fail, try parsing without a specific format
+        try:
+            return pd.to_datetime(s, dayfirst=True)
+        except Exception:
+            return pd.NaT
+
+    # Apply the parsing function to the "DateTime Sample Start" column
+    df["DateTime Sample Start"] = df["DateTime Sample Start"].apply(parse_mixed_date)
+
+    # old version:
+    # # Convert "DateTime Sample Start" to pd.datetime64[ns], coercing errors to NaT
+    # df["DateTime Sample Start"] = pd.to_datetime(
+    #     df["DateTime Sample Start"], errors="coerce", dayfirst=True
+    # )
+
     # Check if the parsing was successful
     if df["DateTime Sample Start"].isna().any():
         # If there are any NaN values, print a warning
