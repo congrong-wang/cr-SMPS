@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 def _plot_heatmap(
+    ax: plt.Axes,
     dataset: SMPSDataset,
     time_range: Optional[
         Union[
@@ -29,7 +30,6 @@ def _plot_heatmap(
             None,
         ]
     ] = None,
-    output_dir: Optional[str] = None,
     output_time_zone: Optional[Union[str, datetime.tzinfo]] = None,
 ):
     # For now, the problem of this plotting function,
@@ -42,24 +42,33 @@ def _plot_heatmap(
     This method generates a heatmap of the sample data using matplotlib.
     Parameters
     ----------
+    ax : plt.Axes
+        The matplotlib Axes object to plot the heatmap on.
+    dataset : SMPSDataset
+        The SMPSDataset instance containing the sample data.
+        Usually `self` when called as a method of SMPSDataset.
+    output_time_zone : Optional[Union[str, datetime.tzinfo]]
+        The time zone to use for the x-axis labels and data localization.
+        If None, use the time zone of the dataset or the first SMPSData instance.
+        If the dataset has no time zone, it will raise an error.
+        Default is None.
     time_range : None, str, tuple, or list, optional
         The time range for which to generate the heatmap. If None, use all data.
         If a string or datetime object, use that specific date.
         If a tuple or list, use the start and end dates as the range.
         Default is None (all data).
-    output_dir : str, optional
-        The directory where the heatmap image will be saved.
-        If None, the image will be saved in the current working directory.
-        Default is None.
     Returns
     -------
-    None: The method displays the heatmap and does not return anything.
+    fname : str
+        The filename of the saved heatmap image.
+    pcm : matplotlib.collections.PolyCollection
+        The PolyCollection object created by pcolormesh.
+        This can be used to add a colorbar or further customize the plot.
     """
-    fig, ax = plt.subplots(figsize=(24, 8))
+
+    """ ARGUMENTS FOR PLOTTING """
     cbar_min = 1e1  # Or adjust based on incoming parameters, will modify later
     cbar_max = 1e4
-    pcm = None  # pcm is the handle for the latest pcolormesh object
-
     """ CHECK TIME ZONES """
 
     def check_SMPSDataset_time_zone(dataset):
@@ -132,6 +141,7 @@ def _plot_heatmap(
         # Still under construction, so use a placeholder "All Data"
         time_str = "All Data"
         fname = "heatmap_all.png"
+        xlabel = "Time"
 
         def mask_func(idx):
             return np.full(len(idx), True)  # Select all data
@@ -204,6 +214,10 @@ def _plot_heatmap(
             end = end.tz_localize(output_time_zone)
             xlabel = "Time ({})".format(output_time_zone)
         xlim = (start, end)
+        if output_time_zone is not None:
+            xlabel = "Time ({})".format(output_time_zone)
+        else:
+            xlabel = "Time (no time zone)"
 
         def mask_func(idx):
             if output_time_zone is not None:
@@ -255,6 +269,7 @@ def _plot_heatmap(
 
     """ Set labels and title """
     if not xlabel:
+
         xlabel = "time."
     ax.set_xlabel(xlabel, fontsize=18)
     ax.set_ylabel("Particle Size (nm)", fontsize=18)
@@ -347,24 +362,4 @@ def _plot_heatmap(
     ax.yaxis.set_major_formatter(mtick.LogFormatterMathtext())
     ax.tick_params(axis="y", labelsize=14)
 
-    # Draw colorbar
-    if pcm is not None:
-        cbar = plt.colorbar(pcm, ax=ax)
-        cbar.ax.tick_params(labelsize=16)  # Set colorbar tick label font size
-        cbar.set_label(
-            "dN/dlogDp [cm$^{-3}$]", fontsize=16
-        )  # Set colorbar label font size
-
-    plt.tight_layout()  # `tight_layout` to avoid overlapping labels
-
-    # Save the figure
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        save_path = os.path.join(output_dir, fname)
-    else:
-        save_path = fname
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
-
-    # Show and close
-    # plt.show()
-    plt.close(fig)
+    return fname, pcm

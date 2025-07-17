@@ -1,5 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
+import os
+
+from matplotlib import pyplot as plt
 from .smps_data import SMPSData
 import pandas as pd
 
@@ -233,12 +236,39 @@ class SMPSDataset:
         """
         from ..analysis.plotting.plot_heatmap import _plot_heatmap
 
-        _plot_heatmap(
-            self,
+        """ ARGUMENTS FOR PLOTTING """
+        fig, ax = plt.subplots(figsize=(24, 8))
+        cbar_min = 1e1  # Or adjust based on incoming parameters, will modify later
+        cbar_max = 1e4
+        # pcm = None  # pcm is the handle for the latest pcolormesh object
+
+        fname, pcm = _plot_heatmap(
+            ax=ax,
+            dataset=self,
             time_range=time_range,
-            output_dir=output_dir,
             output_time_zone=output_time_zone,
         )
+
+        # Draw colorbar
+        if pcm is not None:
+            cbar = plt.colorbar(pcm, ax=ax)
+            cbar.ax.tick_params(labelsize=16)  # Set colorbar tick label font size
+            cbar.set_label(
+                "dN/dlogDp [cm$^{-3}$]", fontsize=16
+            )  # Set colorbar label font size
+        plt.tight_layout()  # `tight_layout` to avoid overlapping labels
+
+        # Save the figure
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            save_path = os.path.join(output_dir, fname)
+        else:
+            save_path = fname
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+        # Show and close
+        # plt.show()
+        plt.close(fig)
 
     def plot_pnsd(self):
         """
