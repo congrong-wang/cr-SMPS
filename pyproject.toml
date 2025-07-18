@@ -1,6 +1,6 @@
 [project]
 name = "cr-smps"
-version = "0.0.3.2"
+version = "0.0.3.3"
 description = "Utilities for reading, analyzing and plotting SMPS data"
 readme = "README.md"
 requires-python = ">=3.11"

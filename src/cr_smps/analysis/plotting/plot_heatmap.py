@@ -280,15 +280,15 @@ def _plot_heatmap(
     )
     # ax.set_title("SMPS Particle Size Concentration Heatmap", fontsize=20, y=1.04)
     # Add the time string below the title
-    ax.text(
-        0.5,  # x position in axes coordinates
-        1.004,  # y position in axes coordinates
-        time_str,
-        fontsize=15,
-        ha="center",
-        va="bottom",
-        transform=ax.transAxes,
-    )
+    # ax.text(
+    #     0.5,  # x position in axes coordinates
+    #     1.004,  # y position in axes coordinates
+    #     time_str,
+    #     fontsize=15,
+    #     ha="center",
+    #     va="bottom",
+    #     transform=ax.transAxes,
+    # )
 
     """ Tick formatting """
     ax.semilogy()  # Set y-axis to logarithmic scale
@@ -365,6 +365,8 @@ def _plot_heatmap(
     ax.set_ylim([1e1, 1e3])
     ax.set_yticks([1e1, 1e2, 1e3])
     ax.yaxis.set_major_formatter(mtick.LogFormatterMathtext())
-    ax.tick_params(axis="y", labelsize=14)
+    ax.tick_params(
+        axis="y",  # labelsize=14
+    )
 
     return fname, pcm
