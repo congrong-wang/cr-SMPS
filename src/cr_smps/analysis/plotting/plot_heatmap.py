@@ -235,6 +235,8 @@ def _plot_heatmap(
             "time_range must be None, a single date, or a (start, end) tuple."
         )
 
+    pcm = None  # Initialize pcm to None, will be set later, just in case no data is plotted
+
     # Plotting the heatmap
     # Iterate over each SMPSData instance and plot the data
     for s in dataset.smpsdata_list:
