@@ -271,11 +271,14 @@ def _plot_heatmap(
 
     """ Set labels and title """
     if not xlabel:
-
         xlabel = "time."
-    ax.set_xlabel(xlabel, fontsize=18)
-    ax.set_ylabel("Particle Size (nm)", fontsize=18)
-    ax.set_title("SMPS Particle Size Concentration Heatmap", fontsize=20, y=1.04)
+    ax.set_xlabel(
+        xlabel,  # fontsize=18
+    )
+    ax.set_ylabel(
+        "Particle Size (nm)",  # fontsize=18
+    )
+    # ax.set_title("SMPS Particle Size Concentration Heatmap", fontsize=20, y=1.04)
     # Add the time string below the title
     ax.text(
         0.5,  # x position in axes coordinates
