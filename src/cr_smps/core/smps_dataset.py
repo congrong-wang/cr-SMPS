@@ -248,6 +248,54 @@ class SMPSDataset:
             time_range=time_range,
             output_time_zone=output_time_zone,
         )
+        # Set axis labels and title
+        ax.set_title("SMPS Particle Size Concentration Heatmap", fontsize=20, y=1.04)
+
+        # Set subtitle based on time_range
+        if time_range is not None:
+            if isinstance(time_range, str):
+                subtitle = f"Date: {time_range}"
+            elif isinstance(time_range, (tuple, list)) and len(time_range) == 2:
+                start_date = pd.to_datetime(time_range[0]).strftime("%Y-%m-%d")
+                end_date = pd.to_datetime(time_range[1]).strftime("%Y-%m-%d")
+                if start_date == end_date:
+                    subtitle = f"Date: {start_date}"
+                else:
+                    subtitle = f"Date Range: {start_date} to {end_date}"
+            else:
+                subtitle = f"Date: {str(time_range)}"
+        else:
+            # If no time_range specified, get the date range from the dataset
+            if hasattr(self, "smpsdata_list") and len(self.smpsdata_list) > 0:
+                start_time = min(
+                    data.metadata.get("Start Time")
+                    for data in self.smpsdata_list
+                    if "Start Time" in data.metadata
+                )
+                end_time = max(
+                    data.metadata.get("End Time")
+                    for data in self.smpsdata_list
+                    if "End Time" in data.metadata
+                )
+                start_date = pd.to_datetime(start_time).strftime("%Y-%m-%d")
+                end_date = pd.to_datetime(end_time).strftime("%Y-%m-%d")
+                if start_date == end_date:
+                    subtitle = f"Date: {start_date}"
+                else:
+                    subtitle = f"Date Range: {start_date} to {end_date}"
+            else:
+                subtitle = "All Available Data"
+
+        # Add the subtitle using ax.text
+        ax.text(
+            0.5,  # x position in axes coordinates
+            1.004,  # y position in axes coordinates
+            subtitle,
+            fontsize=15,
+            ha="center",
+            va="bottom",
+            transform=ax.transAxes,
+        )
 
         # Draw colorbar
         if pcm is not None:
