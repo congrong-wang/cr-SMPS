@@ -6,6 +6,7 @@
 !src/**
 !README.md
 !pyproject.toml
+!LICENSE
 
 # Ignore old files
 src/cr_smps/code_steven.py

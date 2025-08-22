@@ -180,7 +180,7 @@ class SMPSDataset:
         read_metadata: bool = True,
         read_rawdata: bool = False,
         time_zone: str | None = None,
-    ):
+    )-> SMPSDataset:
         from ..io.reader import _SMPSDataset_from_dir
 
         """
